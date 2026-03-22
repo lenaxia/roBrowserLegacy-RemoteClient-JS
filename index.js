@@ -160,12 +160,18 @@ async function startServer() {
     const WebSocket = require('ws');
     const wss = new WebSocket.Server({ noServer: true });
 
-    // Allowed rAthena targets (security: only local game servers)
-    const ALLOWED_TARGETS = [
-      '127.0.0.1:6900',  // Login
-      '127.0.0.1:6121',  // Char
-      '127.0.0.1:5121',  // Map
-    ];
+    // Allowed rAthena targets (security: only explicitly listed game servers).
+    // Override via WS_ALLOWED_TARGETS (comma-separated host:port) for deployments
+    // that cannot use host networking (Kubernetes, Docker Desktop on macOS/Windows,
+    // remote rAthena hosts).  The localhost-only default is preserved when the
+    // variable is absent or empty.
+    const ALLOWED_TARGETS = process.env.WS_ALLOWED_TARGETS
+      ? process.env.WS_ALLOWED_TARGETS.split(',').map(s => s.trim())
+      : [
+          '127.0.0.1:6900',  // Login
+          '127.0.0.1:6121',  // Char
+          '127.0.0.1:5121',  // Map
+        ];
 
     server.on('upgrade', (req, socket, head) => {
       if (req.url.startsWith('/ws/')) {
