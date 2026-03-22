@@ -194,16 +194,20 @@ async function startServer() {
       }
 
       logger.debug(`WS proxy: connecting to ${target}`);
-      const tcp = net.connect(parseInt(targetPort), host);
-      tcp.setNoDelay(true);
+       const tcp = net.connect(parseInt(targetPort), host);
+       tcp.setNoDelay(true);
+       const pending = [];
+       let connected = false;
 
-      tcp.on('connect', () => {
-        logger.debug(`WS proxy: connected to ${target}`);
-      });
+       tcp.on('connect', () => {
+         connected = true;
+         logger.debug(`WS proxy: connected to ${target}`);
+         pending.splice(0).forEach(d => tcp.write(d));
+       });
 
-      ws.on('message', (data) => {
-        if (tcp.writable) tcp.write(data);
-      });
+       ws.on('message', (data) => {
+         if (connected) { tcp.write(data); } else { pending.push(data); }
+       });
 
       tcp.on('data', (data) => {
         if (ws.readyState === WebSocket.OPEN) ws.send(data);
